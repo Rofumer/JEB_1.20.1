@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "jeb_1_20_1",
+  "version": "${version}",
+  "name": "JEB_1.20.1",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/jeb_1_20_1/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "jeb.client.JEBClient"
+    ],
+    "main": [
+      "jeb.JEBMod"
+    ]
+  },
+  "mixins": [
+    "jeb_1_20_1.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
