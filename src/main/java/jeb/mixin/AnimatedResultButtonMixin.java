@@ -7,9 +7,10 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.recipebook.AnimatedResultButton;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeDisplayEntry;
+import net.minecraft.recipe.Recipe;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,7 +23,7 @@ import java.util.List;
 
 
 @Mixin(AnimatedResultButton.class)
-public class AnimatedResultButtonMixin implements AnimatedResultButtonExtension {
+public abstract class AnimatedResultButtonMixin implements AnimatedResultButtonExtension {
 
 
     @Unique
@@ -38,7 +39,7 @@ public class AnimatedResultButtonMixin implements AnimatedResultButtonExtension 
         return System.currentTimeMillis() < this.jeb$flashUntil;
     }
 
-    @Inject(method = "renderWidget", at = @At("TAIL"))
+    @Inject(method = "renderButton", at = @At("TAIL"))
     private void jeb$renderFlash(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (jeb$isFlashing()) {
             AnimatedResultButton self = (AnimatedResultButton) (Object) this;
@@ -50,10 +51,10 @@ public class AnimatedResultButtonMixin implements AnimatedResultButtonExtension 
             method = "showResultCollection",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/screen/recipebook/RecipeResultCollection;filter(Lnet/minecraft/client/gui/screen/recipebook/RecipeResultCollection$RecipeFilterMode;)Ljava/util/List;"
+                    target = "Lnet/minecraft/client/gui/screen/recipebook/RecipeResultCollection;getResults(Z)Ljava/util/List;"
             )
     )
-    private List<RecipeDisplayEntry> redirectFilter(RecipeResultCollection instance, RecipeResultCollection.RecipeFilterMode filterMode) {
+    private List<Recipe<?>> redirectFilter(RecipeResultCollection instance, boolean craftableOnly) {
         // Возвращаем все рецепты, без фильтрации
         return instance.getAllRecipes();
     }
@@ -73,10 +74,20 @@ public class AnimatedResultButtonMixin implements AnimatedResultButtonExtension 
         cir.setReturnValue(list);    // возвращаем изменённый список
     }*/
 
+    @Shadow
+    private int currentResultIndex;
+
+    @Shadow
+    private RecipeResultCollection resultCollection;
+
+    @Shadow
+    protected abstract List<Recipe<?>> getResults();
+
     @Inject(method = "getTooltip", at = @At("HEAD"), cancellable = true)
-    private void onGetTooltip(ItemStack stack, CallbackInfoReturnable<List<Text>> cir) {
+    private void onGetTooltip(CallbackInfoReturnable<List<Text>> cir) {
         try {
-            List<Text> list = new ArrayList<>(Screen.getTooltipFromItem(MinecraftClient.getInstance(), stack));
+            ItemStack itemStack = ((Recipe)this.getResults().get(this.currentResultIndex)).getOutput(this.resultCollection.getRegistryManager());
+            List<Text> list = new ArrayList<>(Screen.getTooltipFromItem(MinecraftClient.getInstance(), itemStack));
 
             list.add(MORE_RECIPES_TEXT);
 

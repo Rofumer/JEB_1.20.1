@@ -1,12 +1,16 @@
 package jeb.mixin;
 
+import com.google.common.collect.Maps;
 import jeb.accessor.ClientRecipeBookAccessor;
 import net.minecraft.client.recipebook.ClientRecipeBook;
+import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.recipe.NetworkRecipeId;
+import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeDisplayEntry;
 
 import net.minecraft.recipe.book.RecipeBookCategory;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,20 +18,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.*;
 
+
 @Mixin(ClientRecipeBook.class)
-public abstract class ClientRecipeBookMixin implements ClientRecipeBookAccessor {
-
-    @Accessor("recipes")
-    @Override
-    public abstract Map<NetworkRecipeId, RecipeDisplayEntry> getRecipes();
-
+public abstract class ClientRecipeBookMixin  {
+    @Shadow
+    protected static abstract RecipeBookGroup getGroupForRecipe(Recipe<?> recipe);
 
     @Inject(method = "toGroupedMap", at = @At("HEAD"), cancellable = true)
-    private static void injectToGroupedMap(Iterable<RecipeDisplayEntry> recipes, CallbackInfoReturnable<Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>>> cir) {
-        Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> map = new HashMap();
+    private static void injectToGroupedMap(Iterable<Recipe<?>> recipes, CallbackInfoReturnable<Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>>> cir) {
+        Map<RecipeBookGroup, List<List<Recipe<?>>>> map = Maps.newHashMap();
 
-        for (RecipeDisplayEntry recipeDisplayEntry : recipes) {
-            RecipeBookCategory recipeBookCategory = recipeDisplayEntry.category();
+        for(Recipe<?> recipe : recipes) {
+            RecipeBookGroup recipeBookGroup = getGroupForRecipe(recipe);
 
             // Игнорируем группу, всегда делаем пустую
             OptionalInt optionalInt = OptionalInt.empty();
