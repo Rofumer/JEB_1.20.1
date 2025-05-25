@@ -10,10 +10,10 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.client.recipebook.RecipeBookGroup;
-import net.minecraft.item.Items;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeManager;
+import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -39,26 +39,28 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.*;
 
 @Mixin(RecipeBookWidget.class)
-public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreenHandler> implements RecipeBookWidgetBridge {
+//public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreenHandler> implements RecipeBookWidgetBridge {
+public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBridge {
 
     // Это будет вызов приватного метода
     @Shadow
-    private void refresh() {}
+    public void refresh() {}
 
     @Override
     public void jeb$refresh() {
         this.refresh();
     }
 
-    @Shadow @Final
+    @Shadow
     private ClientRecipeBook recipeBook;
 
     @Shadow
     private RecipeGroupButtonWidget currentTab;
 
     @Shadow
-    private MinecraftClient client;
+    protected MinecraftClient client;
 
+    @Final
     @Shadow
     private RecipeBookResults recipesArea;
 
@@ -107,7 +109,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
             jeb$customToggleButton.setTextureUV(
                     0, 0,             // u, v (начальная позиция на текстуре)
                     20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                    new Identifier("minecraft", "textures/gui/recipe_book/crafting_overlay.png")  // текстура
+                    new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
             );
         }
         else
@@ -116,7 +118,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
             jeb$customToggleButton.setTextureUV(
                     0, 0,             // u, v (начальная позиция на текстуре)
                     20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                    new Identifier("minecraft", "textures/gui/recipe_book/crafting_overlay_disabled.png")  // текстура
+                    new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
             );
         }
         jeb$customToggleButton.setMessage(Text.of("!"));
@@ -154,7 +156,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
                 jeb$customToggleButton.setTextureUV(
                         0, 0,             // u, v (начальная позиция на текстуре)
                         20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                        new Identifier("minecraft", "textures/gui/recipe_book/crafting_overlay.png")  // текстура
+                        new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
                 );
             }
             else
@@ -162,7 +164,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
                 jeb$customToggleButton.setTextureUV(
                         0, 0,             // u, v (начальная позиция на текстуре)
                         20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                        new Identifier("minecraft", "textures/gui/recipe_book/crafting_overlay_disabled.png")  // текстура
+                        new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
                 );
             }
 
@@ -548,6 +550,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
         ci.cancel();
     }****/
 
+    @Unique
     private boolean recipeResultMatchesQuery(Recipe<?> recipe, String query, String modName) {
         if (recipe == null || recipe.getOutput(this.client.world.getRegistryManager()) == null || recipe.getOutput(this.client.world.getRegistryManager()).isEmpty()) {
             return false;
@@ -590,6 +593,9 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
     }
 
 
+    @Shadow
+    private final RecipeMatcher recipeFinder = new RecipeMatcher();
+
     @Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
     private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
         String string = searchField.getText();
@@ -614,8 +620,11 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
         List<RecipeResultCollection> originalList = recipeBook.getResultsForGroup(currentTab.getCategory());
         List<RecipeResultCollection> filteredList = Lists.newArrayList();
 
+        System.out.println(originalList);
+
         // === Если на вкладке избранного (используем CAMPFIRE как временную категорию) ===
         if (isFavoritesTabActive()) {
+            System.out.println("test1");
             originalList = new ArrayList<>();
 
             for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
@@ -626,6 +635,7 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
 
             List<RecipeResultCollection> matching = null;
             for (RecipeResultCollection collection : originalList) {
+
                 matching = new ArrayList<>();
                 for (Recipe<?> entry : collection.getAllRecipes()) {
                     ItemStack stack = entry.getOutput(this.client.world.getRegistryManager());
@@ -657,11 +667,18 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
             return;
         }
 
+
+        System.out.println("test2");
+
         // === Обычный поиск ===
         for (RecipeResultCollection collection : originalList) {
+
             if (!collection.hasFittingRecipes()) continue;
 
             for (Recipe<?> entry : collection.getAllRecipes()) {
+
+                System.out.println(entry.getOutput(this.client.world.getRegistryManager()));
+
                 boolean match;
                 if (searchIngredients) {
                     match = recipeDisplayMatchesIngredientQuery(entry, query);
@@ -675,18 +692,20 @@ public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreen
             }
         }
 
-        //if(jeb$customToggleState) {
-        //    filteredList.removeIf((resultCollection) -> !resultCollection.hasDisplayableRecipes());
-        //}
+        if(jeb$customToggleState) {
+            filteredList.removeIf((resultCollection) -> !resultCollection.hasFittingRecipes());
+        }
 
         if (this.recipeBook.isFilteringCraftable(craftingScreenHandler)) {
             filteredList.removeIf(rc -> !rc.hasCraftableRecipes());
         }
 
-        filteredList.addAll(JEBClient.generateCustomRecipeList(string));
+        ///////filteredList.addAll(JEBClient.generateCustomRecipeList(string));
 
         ///recipesArea.setResults(filteredList, resetCurrentPage, filteringCraftable);
-        recipesArea.setResults(filteredList, resetCurrentPage);
+        filteredList.forEach((resultCollection) -> resultCollection.computeCraftables(this.recipeFinder, this.craftingScreenHandler.getCraftingWidth(), this.craftingScreenHandler.getCraftingHeight(), this.recipeBook));
+        List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);
+        recipesArea.setResults(filteredList1, resetCurrentPage);
         ci.cancel();
     }
 

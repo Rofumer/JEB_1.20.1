@@ -5,29 +5,36 @@ import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.recipe.Recipe;
 import net.minecraft.recipe.RecipeMatcher;
 import net.minecraft.recipe.book.RecipeBook;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Mixin(RecipeResultCollection.class)
-public class RecipeResultCollectionMixin {
-
-    //@Shadow
-    //private final List<Recipe<?>> recipes;
+public abstract class RecipeResultCollectionMixin {
 
     @Shadow
+    @Final
     private List<Recipe<?>> recipes;
 
     @Shadow
-    private List<Recipe<?>> fittingRecipes;
+    @Final
+    private Set<Recipe<?>> craftableRecipes;
 
     @Shadow
-    private List<Recipe<?>> craftableRecipes;
+    @Final
+    private Set<Recipe<?>> fittingRecipes;
+
+    //@Shadow
+    //private List<Recipe<?>> craftableRecipes;
 
 
     @Inject(method = "computeCraftables", at = @At("HEAD"), cancellable = true)
@@ -63,5 +70,16 @@ public class RecipeResultCollectionMixin {
     private void showAllRecipes(CallbackInfoReturnable<Boolean> cir) {
         // Принудительно возвращаем true, чтобы рецепт считался отображаемым
         cir.setReturnValue(true);
+    }
+
+    @Shadow
+    public abstract List<Recipe<?>> getAllRecipes();
+
+
+    @Overwrite
+    public List<Recipe<?>> getRecipes(boolean craftable) {
+        List<Recipe<?>> allRecipes = this.getAllRecipes(); // метод публичный
+
+        return new ArrayList<>(allRecipes); // Просто копируем все рецепты
     }
 }

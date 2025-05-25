@@ -8,8 +8,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(RecipeBookResults.class)
 public interface RecipeBookResultsAccessor {
-    @Accessor("recipeBookWidget")
-    RecipeBookWidget<?> getRecipeBookWidget();
+    /*@Accessor("recipeBookWidget")
+    RecipeBookWidget<?> getRecipeBookWidget();*/
     @Accessor("hoveredResultButton")
     AnimatedResultButton getHoveredResultButton();
 }

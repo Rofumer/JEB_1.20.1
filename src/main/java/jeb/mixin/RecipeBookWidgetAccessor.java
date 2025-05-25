@@ -2,7 +2,6 @@ package jeb.mixin;
 
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.screen.AbstractCraftingScreenHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
@@ -18,10 +17,10 @@ public interface RecipeBookWidgetAccessor {
     TextFieldWidget getSearchField();
     @Accessor("tabButtons")
     List<?> getTabButtons();
-    @Accessor("tabs")
+    /*@Accessor("tabs")
     List<RecipeBookWidget.Tab> getTabs();
     @Invoker("refreshTabButtons")
     void jeb$refreshTabButtons(boolean filteringCraftable);
     @Invoker("populateAllRecipes")
-    void jeb$populateAllRecipes();
+    void jeb$populateAllRecipes();*/
 }

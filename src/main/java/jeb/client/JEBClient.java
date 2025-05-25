@@ -15,12 +15,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.Ingredient;
-import net.minecraft.recipe.NetworkRecipeId;
-import net.minecraft.recipe.RecipeDisplayEntry;
-import net.minecraft.recipe.book.RecipeBookCategories;
 import net.minecraft.recipe.book.RecipeBookCategory;
-import net.minecraft.recipe.display.ShapelessCraftingRecipeDisplay;
-import net.minecraft.recipe.display.SlotDisplay;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
@@ -129,7 +124,7 @@ public class JEBClient implements ClientModInitializer {
 
 
             Identifier id = Registries.ITEM.getId(item);
-            NetworkRecipeId recipeId = new NetworkRecipeId(9999);
+           /* NetworkRecipeId recipeId = new NetworkRecipeId(9999);
 
             List<SlotDisplay> slots = List.of(
                     new SlotDisplay.TagSlotDisplay(TagKey.of(RegistryKeys.ITEM, Identifier.of("minecraft", id.getPath())))
@@ -147,7 +142,7 @@ public class JEBClient implements ClientModInitializer {
 
             ShapelessCraftingRecipeDisplay display = new ShapelessCraftingRecipeDisplay(slots, resultSlot, stationSlot);
             RecipeDisplayEntry entry = new RecipeDisplayEntry(recipeId, display, group, category, Optional.of(ingredients));
-            list.add(new RecipeResultCollection(List.of(entry)));
+            list.add(new RecipeResultCollection(List.of(entry)));*/
         }
 
         return list;

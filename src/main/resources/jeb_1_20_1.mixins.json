@@ -1,11 +1,21 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "jeb.jeb_1_20_1.mixin",
+  "package": "jeb.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
   ],
   "client": [
+    "ClientRecipeBookMixin",
+    "RecipeAlternativesWidgetMixin",
+    "RecipeBookGroupMixin",
+    "RecipeBookResultsAccessor",
+    "RecipeBookResultsMixin",
+    "RecipeBookWidgetAccessor",
+    "RecipeBookWidgetSearchMixin",
+    "RecipeGroupButtonWidgetMixin",
+    "RecipeResultCollectionMixin",
+    "AnimatedResultButtonMixin"
   ],
   "injectors": {
     "defaultRequire": 1
