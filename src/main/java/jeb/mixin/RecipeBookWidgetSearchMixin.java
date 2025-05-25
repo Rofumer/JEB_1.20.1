@@ -619,12 +619,8 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
         List<RecipeResultCollection> originalList = recipeBook.getResultsForGroup(currentTab.getCategory());
         List<RecipeResultCollection> filteredList = Lists.newArrayList();
-
-        System.out.println(originalList);
-
         // === Если на вкладке избранного (используем CAMPFIRE как временную категорию) ===
         if (isFavoritesTabActive()) {
-            System.out.println("test1");
             originalList = new ArrayList<>();
 
             for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
@@ -667,17 +663,12 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             return;
         }
 
-
-        System.out.println("test2");
-
         // === Обычный поиск ===
         for (RecipeResultCollection collection : originalList) {
 
             if (!collection.hasFittingRecipes()) continue;
 
             for (Recipe<?> entry : collection.getAllRecipes()) {
-
-                System.out.println(entry.getOutput(this.client.world.getRegistryManager()));
 
                 boolean match;
                 if (searchIngredients) {
