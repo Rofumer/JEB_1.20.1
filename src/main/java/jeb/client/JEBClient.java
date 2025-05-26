@@ -250,29 +250,6 @@ public class JEBClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             recipesLoaded = false;
             existingResultItems = new HashSet<>();
-
-
-            List<RecipeResultCollection> originalList;
-
-                originalList = new ArrayList<>();
-
-                for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
-                    originalList.addAll(client.player.getRecipeBook().getResultsForGroup(group));
-                }
-
-
-                for (RecipeResultCollection collection : originalList) {
-
-                    for (Recipe<?> entry : collection.getAllRecipes()) {
-                        ItemStack stack = entry.getOutput(client.world.getRegistryManager());
-                        if (!stack.isEmpty()) {
-                            existingResultItems.add(stack.getItem());
-                        }
-                    }
-
-                }
-
-
         });
 
 
