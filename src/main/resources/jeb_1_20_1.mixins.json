@@ -6,6 +6,7 @@
   "mixins": [
   ],
   "client": [
+    "AnimatedResultButtonMixin",
     "ClientRecipeBookMixin",
     "RecipeAlternativesWidgetMixin",
     "RecipeBookGroupMixin",
@@ -14,8 +15,7 @@
     "RecipeBookWidgetAccessor",
     "RecipeBookWidgetSearchMixin",
     "RecipeGroupButtonWidgetMixin",
-    "RecipeResultCollectionMixin",
-    "AnimatedResultButtonMixin"
+    "RecipeResultCollectionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

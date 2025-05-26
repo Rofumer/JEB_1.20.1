@@ -1,5 +1,6 @@
 package jeb.client;
 
+import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
@@ -10,12 +11,19 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Ingredient;
+import net.minecraft.recipe.Recipe;
+import net.minecraft.recipe.RecipeSerializer;
+import net.minecraft.recipe.book.CraftingRecipeCategory;
 import net.minecraft.recipe.book.RecipeBookCategory;
+import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryWrapper;
@@ -23,6 +31,7 @@ import net.minecraft.registry.tag.TagKey;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.item.TooltipContext;
 
@@ -53,7 +62,7 @@ public class JEBClient implements ClientModInitializer {
 
     public static boolean recipesLoaded = false;
 
-    public static List<RecipeResultCollection> PREGENERATED_RECIPES = generateCustomRecipeList("");
+    //public static List<RecipeResultCollection> PREGENERATED_RECIPES = generateCustomRecipeList("");
 
     public static List<RecipeResultCollection> generateCustomRecipeList(String filter) {
         List<RecipeResultCollection> list = new ArrayList<>();
@@ -124,6 +133,45 @@ public class JEBClient implements ClientModInitializer {
 
 
             Identifier id = Registries.ITEM.getId(item);
+
+
+            Recipe<?> recipe = new CraftingRecipe() {
+                @Override
+                public CraftingRecipeCategory getCategory() {
+                    return null;
+                }
+
+                @Override
+                public boolean matches(RecipeInputInventory inventory, World world) {
+                    return false;
+                }
+
+                @Override
+                public ItemStack craft(RecipeInputInventory inventory, DynamicRegistryManager registryManager) {
+                    return null;
+                }
+
+                @Override
+                public boolean fits(int width, int height) {
+                    return false;
+                }
+
+                @Override
+                public ItemStack getOutput(DynamicRegistryManager registryManager) {
+                    return new ItemStack(item);
+                }
+
+                @Override
+                public Identifier getId() {
+                    return null;
+                }
+
+                @Override
+                public RecipeSerializer<?> getSerializer() {
+                    return null;
+                }
+            };
+
            /* NetworkRecipeId recipeId = new NetworkRecipeId(9999);
 
             List<SlotDisplay> slots = List.of(
@@ -141,8 +189,8 @@ public class JEBClient implements ClientModInitializer {
             List<Ingredient> ingredients = List.of(Ingredient.ofItems(item));
 
             ShapelessCraftingRecipeDisplay display = new ShapelessCraftingRecipeDisplay(slots, resultSlot, stationSlot);
-            RecipeDisplayEntry entry = new RecipeDisplayEntry(recipeId, display, group, category, Optional.of(ingredients));
-            list.add(new RecipeResultCollection(List.of(entry)));*/
+            RecipeDisplayEntry entry = new RecipeDisplayEntry(recipeId, display, group, category, Optional.of(ingredients));*/
+            list.add(new RecipeResultCollection(client.world.getRegistryManager(),List.of(recipe)));
         }
 
         return list;
@@ -202,6 +250,29 @@ public class JEBClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             recipesLoaded = false;
             existingResultItems = new HashSet<>();
+
+
+            List<RecipeResultCollection> originalList;
+
+                originalList = new ArrayList<>();
+
+                for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
+                    originalList.addAll(client.player.getRecipeBook().getResultsForGroup(group));
+                }
+
+
+                for (RecipeResultCollection collection : originalList) {
+
+                    for (Recipe<?> entry : collection.getAllRecipes()) {
+                        ItemStack stack = entry.getOutput(client.world.getRegistryManager());
+                        if (!stack.isEmpty()) {
+                            existingResultItems.add(stack.getItem());
+                        }
+                    }
+
+                }
+
+
         });
 
 

@@ -313,9 +313,11 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
         Recipe<?> recipe = this.recipesArea.getLastClickedRecipe();
 
+        RecipeResultCollection collection = this.recipesArea.getLastClickedResults();
+
         ScreenHandler screenHandler = client.player.currentScreenHandler;
 
-        if(recipe != null) {
+        if(collection != null && recipe != null && screenHandler != null && !collection.hasCraftableRecipes()) {
             recipeManager.get(recipe.getId()).ifPresent(recipe1 -> {
                 if (this.client.currentScreen instanceof RecipeBookProvider) {
                     RecipeBookWidget recipeBookWidget = ((RecipeBookProvider) this.client.currentScreen).getRecipeBookWidget();
@@ -695,7 +697,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             filteredList.removeIf(rc -> !rc.hasCraftableRecipes());
         }
 
-        ///////filteredList.addAll(JEBClient.generateCustomRecipeList(string));
+        filteredList.addAll(JEBClient.generateCustomRecipeList(string));
 
         ///recipesArea.setResults(filteredList, resetCurrentPage, filteringCraftable);
         /*List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);

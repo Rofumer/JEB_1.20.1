@@ -10,7 +10,10 @@ import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.RecipeBookDataC2SPacket;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.screen.AbstractRecipeScreenHandler;
+import net.minecraft.screen.ScreenHandler;
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -90,11 +93,20 @@ public class RecipeBookResultsMixin {
 
                 if(entry != null) {
 
-                    if(!entry.hasFittingRecipes()) {
+                    if(!canDisplay(animatedResultButton.currentRecipe())
+                    )
+                    {
                         alternatesWidget.showAlternativesForResult(this.client,entry, animatedResultButton.getX(), animatedResultButton.getY(), areaLeft + areaWidth / 2, areaTop + 13 + areaHeight / 2, (float) animatedResultButton.getWidth());
                     }
                     else
                     {
+
+                        this.lastClickedRecipe = animatedResultButton.currentRecipe();
+                        this.resultCollection = animatedResultButton.getResultCollection();
+                        //recipeBook.shouldDisplay(animatedResultButton.currentRecipe());
+                        recipeBook.onRecipeDisplayed(animatedResultButton.currentRecipe());
+                        ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
+                        networkHandler.sendPacket(new RecipeBookDataC2SPacket(animatedResultButton.currentRecipe()));
                         /*this.lastClickedRecipe = animatedResultButton.getCurrentId();
                         this.resultCollection = animatedResultButton.getResultCollection();
                         recipeBook.unmarkHighlighted(animatedResultButton.getCurrentId());
@@ -110,20 +122,22 @@ public class RecipeBookResultsMixin {
 
     }
 
-    /*private boolean canDisplay(RecipeDisplay display) {
-        RecipeBookWidget<?> widget = this.recipeBookWidget;
+    @Final
+    @Shadow
+    private List<RecipeDisplayListener> recipeDisplayListeners;
 
-         handler =  MinecraftClient.getInstance().player.currentScreenHandler;
 
-        //AbstractCraftingScreenHandler handler = ((RecipeBookWidgetAccessor) widget).getCraftingScreenHandler();
-        int i = handler.getWidth();
-        int j = handler.getHeight();
+    @Unique
+    private boolean canDisplay(Recipe<?> display) {
 
-        return switch (display) {
-            case ShapedCraftingRecipeDisplay shaped -> i >= shaped.width() && j >= shaped.height();
-            case ShapelessCraftingRecipeDisplay shapeless -> i * j >= shapeless.ingredients().size();
-            default -> false;
-        };
-    }*/
+        AbstractRecipeScreenHandler<?> handler = null;
+
+        for(RecipeDisplayListener recipeDisplayListener : this.recipeDisplayListeners) {
+            handler = ((RecipeBookWidgetAccessor) recipeDisplayListener).getCraftingScreenHandler();
+        }
+
+     return display.fits(handler.getCraftingWidth(),handler.getCraftingHeight());
+
+    }
 
 }
