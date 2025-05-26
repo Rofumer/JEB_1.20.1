@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +48,7 @@ public abstract class AnimatedResultButtonMixin implements AnimatedResultButtonE
         }
     }
 
-    @Redirect(
+    /*@Redirect(
             method = "showResultCollection",
             at = @At(
                     value = "INVOKE",
@@ -57,6 +58,16 @@ public abstract class AnimatedResultButtonMixin implements AnimatedResultButtonE
     private List<Recipe<?>> redirectFilter(RecipeResultCollection instance, boolean craftableOnly) {
         // Возвращаем все рецепты, без фильтрации
         return instance.getAllRecipes();
+    }*/
+
+    @Shadow private RecipeResultCollection resultCollection;
+
+    /**
+     * Replaces the return value of getResults() with all recipes from the collection.
+     */
+    @Inject(method = "getResults", at = @At("TAIL"), cancellable = true)
+    private void injectGetResults(CallbackInfoReturnable<List<Recipe<?>>> cir) {
+        cir.setReturnValue(this.resultCollection.getAllRecipes());
     }
 
     @Unique
@@ -77,8 +88,7 @@ public abstract class AnimatedResultButtonMixin implements AnimatedResultButtonE
     @Shadow
     private int currentResultIndex;
 
-    @Shadow
-    private RecipeResultCollection resultCollection;
+
 
     @Shadow
     protected abstract List<Recipe<?>> getResults();

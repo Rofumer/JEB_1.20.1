@@ -19,9 +19,9 @@ public abstract class RecipeBookGroupMixin {
             List<RecipeBookGroup> original = new ArrayList<>(cir.getReturnValue());
 
             // Вставляем CAMPFIRE вторым (после CRAFTING_SEARCH)
-            //original.add(1, RecipeBookGroup.CAMPFIRE);
-            int index = original.indexOf(RecipeBookGroup.CRAFTING_SEARCH);
-            original.add(index + 1, RecipeBookGroup.CAMPFIRE);
+            original.add(1, RecipeBookGroup.CAMPFIRE);
+            //int index = original.indexOf(RecipeBookGroup.CRAFTING_SEARCH);
+            //original.add(index + 1, RecipeBookGroup.CAMPFIRE);
 
             cir.setReturnValue(original);
         }

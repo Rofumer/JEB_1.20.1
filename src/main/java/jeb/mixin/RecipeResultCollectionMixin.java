@@ -66,6 +66,7 @@ public abstract class RecipeResultCollectionMixin {
     }
 
 
+
     @Inject(method = "hasFittingRecipes", at = @At("HEAD"), cancellable = true)
     private void showAllRecipes(CallbackInfoReturnable<Boolean> cir) {
         // Принудительно возвращаем true, чтобы рецепт считался отображаемым
@@ -76,10 +77,27 @@ public abstract class RecipeResultCollectionMixin {
     public abstract List<Recipe<?>> getAllRecipes();
 
 
-    @Overwrite
+    /*@Overwrite
     public List<Recipe<?>> getRecipes(boolean craftable) {
         List<Recipe<?>> allRecipes = this.getAllRecipes(); // метод публичный
 
         return new ArrayList<>(allRecipes); // Просто копируем все рецепты
-    }
+    }*/
+
+
+
+    /**
+     * Overwrites getRecipes to use only craftableRecipes condition.
+     */
+    /*
+    @Overwrite
+    public List<Recipe<?>> getRecipes(boolean craftable) {
+        List<Recipe<?>> list = new ArrayList<>();
+        for (Recipe<?> recipe : this.recipes) {
+            if (craftable) {
+                list.add(recipe);
+            }
+        }
+        return list;
+    }*/
 }

@@ -596,6 +596,8 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
     @Shadow
     private final RecipeMatcher recipeFinder = new RecipeMatcher();
 
+    @Shadow public abstract void reset();
+
     @Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
     private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
         String string = searchField.getText();
@@ -683,6 +685,8 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             }
         }
 
+        filteredList.forEach((resultCollection) -> resultCollection.computeCraftables(this.recipeFinder, this.craftingScreenHandler.getCraftingWidth(), this.craftingScreenHandler.getCraftingHeight(), this.recipeBook));
+
         if(jeb$customToggleState) {
             filteredList.removeIf((resultCollection) -> !resultCollection.hasFittingRecipes());
         }
@@ -694,9 +698,16 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         ///////filteredList.addAll(JEBClient.generateCustomRecipeList(string));
 
         ///recipesArea.setResults(filteredList, resetCurrentPage, filteringCraftable);
-        filteredList.forEach((resultCollection) -> resultCollection.computeCraftables(this.recipeFinder, this.craftingScreenHandler.getCraftingWidth(), this.craftingScreenHandler.getCraftingHeight(), this.recipeBook));
-        List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);
-        recipesArea.setResults(filteredList1, resetCurrentPage);
+        /*List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);
+        //recipesArea.setResults(filteredList1, resetCurrentPage);
+        if(jeb$customToggleState) {
+            filteredList1.removeIf((resultCollection) -> !resultCollection.hasFittingRecipes());
+        }
+
+        if (this.recipeBook.isFilteringCraftable(craftingScreenHandler)) {
+            filteredList1.removeIf(rc -> !rc.hasCraftableRecipes());
+        }*/
+        recipesArea.setResults(filteredList, resetCurrentPage);
         ci.cancel();
     }
 
