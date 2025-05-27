@@ -627,9 +627,10 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         if (isFavoritesTabActive()) {
             originalList = new ArrayList<>();
 
-            for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
-                originalList.addAll(recipeBook.getResultsForGroup(group));
-            }
+            //for (RecipeBookGroup group : RecipeBookGroup.CRAFTING) {
+                //originalList.addAll(recipeBook.getResultsForGroup(group));
+            originalList.addAll(recipeBook.getResultsForGroup(RecipeBookGroup.CRAFTING_SEARCH));
+            //}
 
             Set<Identifier> favoriteItems = FavoritesManager.loadFavoriteItemIds();
 
