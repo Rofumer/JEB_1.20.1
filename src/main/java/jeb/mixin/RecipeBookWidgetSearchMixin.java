@@ -107,18 +107,16 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         if(JEBClient.customToggleEnabled){
             jeb$customToggleButton.setTooltip(Tooltip.of(Text.of("Show 3x3")));
             jeb$customToggleButton.setTextureUV(
-                    0, 0,             // u, v (начальная позиция на текстуре)
-                    20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                    new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
+                    0, 0, 28, 18,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
+                    new Identifier("jeb", "textures/gui/recipe_book.png")  // текстура
             );
         }
         else
         {
             jeb$customToggleButton.setTooltip(Tooltip.of(Text.of("Show 2x2")));
             jeb$customToggleButton.setTextureUV(
-                    0, 0,             // u, v (начальная позиция на текстуре)
-                    20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                    new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
+                    0, 0, 28, 18,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
+                    new Identifier("jeb", "textures/gui/recipe_book.png")  // текстура
             );
         }
         jeb$customToggleButton.setMessage(Text.of("!"));
@@ -154,17 +152,15 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             //jeb$customToggleButton.setTextures(JEBClient.customToggleEnabled ? TEXTURES_ALT : TEXTURES_DEFAULT);
             if(JEBClient.customToggleEnabled){
                 jeb$customToggleButton.setTextureUV(
-                        0, 0,             // u, v (начальная позиция на текстуре)
-                        20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                        new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
+                        0, 0, 28, 18,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
+                        new Identifier("jeb", "textures/gui/recipe_book.png")  // текстура
                 );
             }
             else
             {
                 jeb$customToggleButton.setTextureUV(
-                        0, 0,             // u, v (начальная позиция на текстуре)
-                        20, 20,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
-                        new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
+                        0, 0, 28, 18,           // pressedUOffset (сдвиг по X при неактивном состоянии), hoverVOffset (сдвиг по Y при наведении)
+                        new Identifier("jeb", "textures/gui/recipe_book.png")  // текстура
                 );
             }
 
