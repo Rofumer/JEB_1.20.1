@@ -149,33 +149,10 @@ public class FavoritesManager {
 
 
     private static String getSerializedNbt(ItemStack stack) {
-       /* NbtCompound result = new NbtCompound();
-
-        var blockEntityData = stack.get(net.minecraft.component.DataComponentTypes.BLOCK_ENTITY_DATA);
-        if (blockEntityData != null && !blockEntityData.copyNbt().isEmpty()) {
-            result.copyFrom(blockEntityData.copyNbt());
-        }
-
-        var customData = stack.get(net.minecraft.component.DataComponentTypes.CUSTOM_NAME);
-        if (customData != null && !customData.getString().isEmpty()) {
-            return customData.getString();
-        }
-
-        var bucketEntityData = stack.get(net.minecraft.component.DataComponentTypes.BUCKET_ENTITY_DATA);
-        if (bucketEntityData != null && !bucketEntityData.copyNbt().isEmpty()) {
-            result.copyFrom(bucketEntityData.copyNbt());
-        }
-
-        var entityData = stack.get(net.minecraft.component.DataComponentTypes.ENTITY_DATA);
-        if (entityData != null && !entityData.copyNbt().isEmpty()) {
-            result.copyFrom(entityData.copyNbt());
-        }
-
-        return result.isEmpty() ? "" : result.toString();
-
-        */
-        return "";
+        NbtCompound tag = stack.getNbt();
+        return (tag != null && !tag.isEmpty()) ? tag.toString() : "";
     }
+
 
 
 
