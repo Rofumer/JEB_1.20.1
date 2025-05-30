@@ -1,6 +1,5 @@
 package jeb.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import jeb.accessor.ClientRecipeBookAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.recipebook.*;
@@ -21,7 +20,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +46,9 @@ public class RecipeBookResultsMixin {
     @Nullable
     private RecipeResultCollection resultCollection;
 
+    @Shadow
+    private AnimatedResultButton hoveredResultButton;
+
     @Shadow private MinecraftClient client;
 
     @Inject(method = "setGui", at = @At("HEAD"))
@@ -62,61 +66,63 @@ public class RecipeBookResultsMixin {
             cancellable = true
     )
     private void onRightClickInject(
-            double mouseX, double mouseY, int button, int areaLeft, int areaTop, int areaWidth, int areaHeight, CallbackInfoReturnable<Boolean> cir, @Local AnimatedResultButton animatedResultButton
+            double mouseX, double mouseY, int button, int areaLeft, int areaTop, int areaWidth, int areaHeight, CallbackInfoReturnable<Boolean> cir
     ) {
 
-        if (animatedResultButton.mouseClicked(mouseX, mouseY, button)) {
+        AnimatedResultButton hovered = hoveredResultButton;
 
-            if (button == 1) {
-                ItemStack stack = animatedResultButton.currentRecipe().getOutput(this.client.world.getRegistryManager());
-                String itemName = stack.getItem().getName().getString(); // Локализованное имя (например, "Булыжник")
-                String searchText = "#" + itemName.toLowerCase(Locale.ROOT);
+        if (hovered != null) {
+
+            if (hovered.mouseClicked(mouseX, mouseY, button)) {
+
+                if (button == 1) {
+                    ItemStack stack = hovered.currentRecipe().getOutput(this.client.world.getRegistryManager());
+                    String itemName = stack.getItem().getName().getString(); // Локализованное имя (например, "Булыжник")
+                    String searchText = "#" + itemName.toLowerCase(Locale.ROOT);
 
 // Устанавливаем в поиск
-                ((RecipeBookWidgetAccessor) jeb$widget).getSearchField().setText(searchText);
-                ((RecipeBookWidgetAccessor) jeb$widget).invokeReset();
+                    ((RecipeBookWidgetAccessor) jeb$widget).getSearchField().setText(searchText);
+                    ((RecipeBookWidgetAccessor) jeb$widget).invokeReset();
 
-                cir.setReturnValue(true);
-                cir.cancel();
-            }
-
-
-            if (button == 0) {
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                }
 
 
-                //System.out.println(animatedResultButton.getCurrentId().toString());
+                if (button == 0) {
 
-                MinecraftClient client = MinecraftClient.getInstance();
-                ClientRecipeBook recipeBook = client.player.getRecipeBook();
 
-                RecipeResultCollection entry = animatedResultButton.getResultCollection();
+                    //System.out.println(animatedResultButton.getCurrentId().toString());
 
-                if(entry != null) {
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    ClientRecipeBook recipeBook = client.player.getRecipeBook();
 
-                    if(!canDisplay(animatedResultButton.currentRecipe())
-                    )
-                    {
-                        alternatesWidget.showAlternativesForResult(this.client,entry, animatedResultButton.getX(), animatedResultButton.getY(), areaLeft + areaWidth / 2, areaTop + 13 + areaHeight / 2, (float) animatedResultButton.getWidth());
-                    }
-                    else
-                    {
+                    RecipeResultCollection entry = hovered.getResultCollection();
 
-                        this.lastClickedRecipe = animatedResultButton.currentRecipe();
-                        this.resultCollection = animatedResultButton.getResultCollection();
-                        //recipeBook.shouldDisplay(animatedResultButton.currentRecipe());
-                        recipeBook.onRecipeDisplayed(animatedResultButton.currentRecipe());
-                        ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
-                        networkHandler.sendPacket(new RecipeBookDataC2SPacket(animatedResultButton.currentRecipe()));
+                    if (entry != null) {
+
+                        if (!canDisplay(hovered.currentRecipe())
+                        ) {
+                            alternatesWidget.showAlternativesForResult(this.client, entry, hovered.getX(), hovered.getY(), areaLeft + areaWidth / 2, areaTop + 13 + areaHeight / 2, (float) hovered.getWidth());
+                        } else {
+
+                            this.lastClickedRecipe = hovered.currentRecipe();
+                            this.resultCollection = hovered.getResultCollection();
+                            //recipeBook.shouldDisplay(animatedResultButton.currentRecipe());
+                            recipeBook.onRecipeDisplayed(hovered.currentRecipe());
+                            ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
+                            networkHandler.sendPacket(new RecipeBookDataC2SPacket(hovered.currentRecipe()));
                         /*this.lastClickedRecipe = animatedResultButton.getCurrentId();
                         this.resultCollection = animatedResultButton.getResultCollection();
                         recipeBook.unmarkHighlighted(animatedResultButton.getCurrentId());
                         ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
                         networkHandler.sendPacket(new RecipeBookDataC2SPacket(animatedResultButton.getCurrentId()));*/
+                        }
                     }
-                }
 
-                cir.setReturnValue(true);
-                cir.cancel();
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                }
             }
         }
 

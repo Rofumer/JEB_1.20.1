@@ -38,6 +38,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.*;
 
+import static jeb.client.JEBClient.filtered;
+import static jeb.client.JEBClient.string;
+
 @Mixin(RecipeBookWidget.class)
 //public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreenHandler> implements RecipeBookWidgetBridge {
 public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBridge {
@@ -106,6 +109,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         jeb$customToggleButton = new ToggleButtonWidget(x, y, 24, 24, false);
         if(JEBClient.customToggleEnabled){
             jeb$customToggleButton.setTooltip(Tooltip.of(Text.of("Show 3x3")));
+            jeb$customToggleButton.setToggled(false);
             jeb$customToggleButton.setTextureUV(
                     152, 78, 26, 26,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
                     new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
@@ -114,6 +118,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         else
         {
             jeb$customToggleButton.setTooltip(Tooltip.of(Text.of("Show 2x2")));
+            jeb$customToggleButton.setToggled(true);
             jeb$customToggleButton.setTextureUV(
                     152, 78, 26, 26,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
                     new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
@@ -155,6 +160,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
                         152, 78, 26, 26,           // pressedUOffset (сдвиг по X при активном состоянии), hoverVOffset (сдвиг по Y при наведении)
                         new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
                 );
+                jeb$customToggleButton.setToggled(false);
             }
             else
             {
@@ -162,6 +168,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
                         152, 78, 26, 26,           // pressedUOffset (сдвиг по X при неактивном состоянии), hoverVOffset (сдвиг по Y при наведении)
                         new Identifier("minecraft", "textures/gui/recipe_book.png")  // текстура
                 );
+                jeb$customToggleButton.setToggled(true);
             }
 
             jeb$customToggleButton.setTooltip(JEBClient.customToggleEnabled ? Tooltip.of(Text.of("Show 3x3")):Tooltip.of(Text.of("Show 2x2")));
@@ -269,7 +276,8 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
         // Проверка на нужную клавишу (например, клавиша G, keyCode = 71)
-        if (keyCode == GLFW.GLFW_KEY_A) {
+        //if (keyCode == GLFW.GLFW_KEY_A) {
+        if (JEBClient.keyBinding.matchesKey(keyCode, scanCode)) {
             AnimatedResultButton hovered = ((RecipeBookResultsAccessor) recipesArea).getHoveredResultButton();
             if (hovered != null) {
                 //System.out.println("Над кнопкой: " + hovered.getDisplayStack().getItem().toString());
@@ -596,7 +604,102 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
     @Shadow public abstract void reset();
 
+
     @Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
+    private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
+        String search = searchField.getText();
+        boolean isIngredientSearch = search.startsWith("#");
+
+        final String finalQuery;
+        final String finalModName;
+
+        if (search.startsWith("@")) {
+            int endIdx = search.indexOf(' ');
+            if (endIdx != -1) {
+                finalModName = search.substring(1, endIdx).trim();
+                finalQuery = search.substring(endIdx + 1).toLowerCase();
+            } else {
+                finalModName = search.substring(1).trim();
+                finalQuery = "";
+            }
+        } else if (isIngredientSearch) {
+            finalModName = null;
+            finalQuery = search.substring(1).toLowerCase();
+        } else {
+            finalModName = null;
+            finalQuery = search.toLowerCase();
+        }
+
+        ClientPlayNetworkHandler handler = client.getNetworkHandler();
+        if (handler == null) return;
+
+        List<RecipeResultCollection> originalList = recipeBook.getResultsForGroup(currentTab.getCategory());
+        List<RecipeResultCollection> filteredList = new ArrayList<>();
+
+        if (isFavoritesTabActive()) {
+            Set<Identifier> favorites = FavoritesManager.loadFavoriteItemIds();
+            originalList = recipeBook.getResultsForGroup(RecipeBookGroup.CRAFTING_SEARCH);
+
+            for (RecipeResultCollection collection : originalList) {
+                List<Recipe<?>> matching = collection.getAllRecipes().stream()
+                        .filter(recipe -> favorites.contains(Registries.ITEM.getId(recipe.getOutput(client.world.getRegistryManager()).getItem())))
+                        .toList();
+
+                if (!matching.isEmpty()) {
+                    filteredList.add(new RecipeResultCollection(client.world.getRegistryManager(), matching));
+                }
+            }
+
+            recipesArea.setResults(filteredList, resetCurrentPage);
+            ci.cancel();
+            return;
+        }
+
+        for (RecipeResultCollection collection : originalList) {
+            if (!collection.hasFittingRecipes()) continue;
+
+            boolean matches = collection.getAllRecipes().stream().anyMatch(recipe ->
+                    isIngredientSearch ? recipeDisplayMatchesIngredientQuery(recipe, finalQuery)
+                            : recipeResultMatchesQuery(recipe, finalQuery, finalModName)
+            );
+
+            if (matches) {
+                filteredList.add(collection);
+            }
+        }
+
+        filteredList.forEach(result ->
+                result.computeCraftables(recipeFinder,
+                        craftingScreenHandler.getCraftingWidth(),
+                        craftingScreenHandler.getCraftingHeight(),
+                        recipeBook)
+        );
+
+        if (jeb$customToggleState) {
+            filteredList.removeIf(result -> !result.hasFittingRecipes());
+        }
+
+        if (recipeBook.isFilteringCraftable(craftingScreenHandler)) {
+            filteredList.removeIf(result -> !result.hasCraftableRecipes());
+        }
+
+        //filteredList.addAll(JEBClient.generateCustomRecipeList(search));
+
+        if(!Objects.equals(string,search))
+        {
+            filtered = JEBClient.generateCustomRecipeList(search);
+        }
+
+        filteredList.addAll(filtered);
+
+        string=search;
+
+        recipesArea.setResults(filteredList, resetCurrentPage);
+        ci.cancel();
+    }
+
+
+    /*@Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
     private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
         String string = searchField.getText();
         boolean searchIngredients = string.startsWith("#");
@@ -696,19 +799,21 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
         filteredList.addAll(JEBClient.generateCustomRecipeList(string));
 
-        ///recipesArea.setResults(filteredList, resetCurrentPage, filteringCraftable);
-        /*List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);
-        //recipesArea.setResults(filteredList1, resetCurrentPage);
-        if(jeb$customToggleState) {
-            filteredList1.removeIf((resultCollection) -> !resultCollection.hasFittingRecipes());
-        }
+        //recipesArea.setResults(filteredList, resetCurrentPage, filteringCraftable);
+        ///List<RecipeResultCollection> filteredList1 = Lists.newArrayList(filteredList);
+        /////recipesArea.setResults(filteredList1, resetCurrentPage);
+        ///if(jeb$customToggleState) {
+        ///    filteredList1.removeIf((resultCollection) -> !resultCollection.hasFittingRecipes());
+       /// }
 
-        if (this.recipeBook.isFilteringCraftable(craftingScreenHandler)) {
-            filteredList1.removeIf(rc -> !rc.hasCraftableRecipes());
-        }*/
+       /// if (this.recipeBook.isFilteringCraftable(craftingScreenHandler)) {
+         ///   filteredList1.removeIf(rc -> !rc.hasCraftableRecipes());
+      ///  }
+
+
         recipesArea.setResults(filteredList, resetCurrentPage);
         ci.cancel();
-    }
+    }*/
 
 
 

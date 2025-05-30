@@ -149,8 +149,9 @@ public class FavoritesManager {
 
 
     private static String getSerializedNbt(ItemStack stack) {
-        NbtCompound tag = stack.getNbt();
-        return (tag != null && !tag.isEmpty()) ? tag.toString() : "";
+        //NbtCompound tag = stack.getNbt();
+        //return (tag != null && !tag.isEmpty()) ? tag.toString() : "";
+        return "";
     }
 
 

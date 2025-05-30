@@ -56,9 +56,13 @@ public class JEBClient implements ClientModInitializer {
 
 
 
-    private static KeyBinding keyBinding;
+    public static KeyBinding keyBinding;
 
     public static Set<Item> existingResultItems = new HashSet<>();
+    public static Set<Item> nonexistingResultItems = new HashSet<>();
+
+    public static String string = "-";
+    public static List<RecipeResultCollection> filtered = new ArrayList<>();
 
     public static boolean recipesLoaded = false;
 
@@ -88,9 +92,9 @@ public class JEBClient implements ClientModInitializer {
             query = filter.toLowerCase();
         }
 
-        for (Item item : Registries.ITEM) {
+        for (Item item : nonexistingResultItems) {
             if (item == Items.AIR) continue;
-            if (existingResultItems.contains(item)) continue;
+            //if (existingResultItems.contains(item)) continue;
 
 
             String name = item.getName().getString().toLowerCase(Locale.ROOT);
@@ -240,9 +244,9 @@ public class JEBClient implements ClientModInitializer {
         Runtime.getRuntime().addShutdownHook(new Thread(JEBClient::saveConfig));
 
         keyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Optional recipes loading screen", // The translation key of the keybinding's name
+                "Add/Remove Favorite Recipes", // The translation key of the keybinding's name
                 InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
-                GLFW.GLFW_KEY_APOSTROPHE, // The keycode of the key
+                GLFW.GLFW_KEY_A, // The keycode of the key
                 "JEB (Just Enough Book)" // The translation key of the keybinding's category.
         ));
 
@@ -250,6 +254,7 @@ public class JEBClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             recipesLoaded = false;
             existingResultItems = new HashSet<>();
+            nonexistingResultItems = new HashSet<>();
         });
 
 
