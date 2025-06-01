@@ -69,7 +69,75 @@ public class JEBClient implements ClientModInitializer {
 
     //public static List<RecipeResultCollection> PREGENERATED_RECIPES = generateCustomRecipeList("");
 
+
     public static List<RecipeResultCollection> generateCustomRecipeList(String filter) {
+        List<RecipeResultCollection> list = new ArrayList<>();
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        String query = "";
+        String modName = null;
+
+        filter = filter.trim();
+        if (filter.startsWith("@")) {
+            String[] parts = filter.substring(1).split(" ", 2);
+            modName = parts[0].toLowerCase(Locale.ROOT);
+            if (parts.length > 1) {
+                query = parts[1].toLowerCase(Locale.ROOT);
+            }
+        } else {
+            query = filter.toLowerCase(Locale.ROOT);
+        }
+
+        for (Item item : nonexistingResultItems) {
+            if (item == Items.AIR) continue;
+
+            Identifier id = Registries.ITEM.getId(item);
+            String idStr = id.toString().toLowerCase(Locale.ROOT);
+            String name = item.getName().getString().toLowerCase(Locale.ROOT);
+            String key = translate(item.getTranslationKey()).toLowerCase(Locale.ROOT);
+
+            // Фильтр по мод-нейму
+            if (modName != null && !id.getNamespace().toLowerCase(Locale.ROOT).contains(modName)) {
+                continue;
+            }
+
+            // Базовый поиск
+            boolean matchesBasic = name.contains(query) || idStr.contains(query) || key.contains(query);
+            boolean matchesTooltip = false;
+
+            // Тултипы проверяем только при необходимости
+            if (!matchesBasic && query.length() >= 3 && client.world != null) {
+                try {
+                    TooltipContext context = client.options.advancedItemTooltips
+                            ? TooltipContext.Default.ADVANCED
+                            : TooltipContext.Default.BASIC;
+                    List<Text> tooltip = item.getDefaultStack().getTooltip(client.player, context);
+
+                    for (Text line : tooltip) {
+                        String clean = Formatting.strip(line.getString()).toLowerCase(Locale.ROOT).trim();
+                        if (clean.contains(query)) {
+                            matchesTooltip = true;
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (!matchesBasic && !matchesTooltip) continue;
+
+            // Добавляем в список
+            DummySingleItemRecipe dummy = new DummySingleItemRecipe(item.getDefaultStack());
+            list.add(new RecipeResultCollection(client.world.getRegistryManager(), List.of(dummy)));
+        }
+
+        return list;
+    }
+
+
+
+    /*public static List<RecipeResultCollection> generateCustomRecipeList(String filter) {
         List<RecipeResultCollection> list = new ArrayList<>();
 
         MinecraftClient client = MinecraftClient.getInstance();
@@ -177,29 +245,11 @@ public class JEBClient implements ClientModInitializer {
                 }
             };
 
-           /* NetworkRecipeId recipeId = new NetworkRecipeId(9999);
-
-            List<SlotDisplay> slots = List.of(
-                    new SlotDisplay.TagSlotDisplay(TagKey.of(RegistryKeys.ITEM, Identifier.of("minecraft", id.getPath())))
-            );
-
-            SlotDisplay.StackSlotDisplay resultSlot = new SlotDisplay.StackSlotDisplay(new ItemStack(item, 1));
-            SlotDisplay.ItemSlotDisplay stationSlot = new SlotDisplay.ItemSlotDisplay(
-                    Registries.ITEM.get(Identifier.of("minecraft", "crafting_table"))
-            );
-
-            OptionalInt group = OptionalInt.empty();
-            RecipeBookCategory category = RecipeBookCategories.CRAFTING_MISC;
-
-            List<Ingredient> ingredients = List.of(Ingredient.ofItems(item));
-
-            ShapelessCraftingRecipeDisplay display = new ShapelessCraftingRecipeDisplay(slots, resultSlot, stationSlot);
-            RecipeDisplayEntry entry = new RecipeDisplayEntry(recipeId, display, group, category, Optional.of(ingredients));*/
             list.add(new RecipeResultCollection(client.world.getRegistryManager(),List.of(recipe)));
         }
 
         return list;
-    }
+    }*/
 
 
     private boolean waitingForR = false; // Добавляем флаг для проверки, нужно ли устанавливать экран
