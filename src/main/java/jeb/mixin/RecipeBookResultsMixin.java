@@ -73,7 +73,24 @@ public class RecipeBookResultsMixin {
 
         if (hovered != null) {
 
-            if (hovered.mouseClicked(mouseX, mouseY, button)) {
+            //if (hovered.mouseClicked(mouseX, mouseY, button)) {
+
+
+                if (button == 2) {
+                    ItemStack stack = hovered.currentRecipe().getOutput(this.client.world.getRegistryManager());
+                    String itemName = stack.getItem().toString(); // Локализованное имя (например, "Булыжник")
+                    String searchText = "~" + itemName.toLowerCase(Locale.ROOT);
+
+// Устанавливаем в поиск
+                    ((RecipeBookWidgetAccessor) jeb$widget).getSearchField().setText(searchText);
+                    ((RecipeBookWidgetAccessor) jeb$widget).setSelectedTab((RecipeGroupButtonWidget) ((RecipeBookWidgetAccessor) jeb$widget).getTabButtons().get(0));
+                    ((RecipeBookWidgetAccessor) jeb$widget).invokeReset();
+
+                    cir.setReturnValue(true);
+                    cir.cancel();
+                }
+
+
 
                 if (button == 1) {
                     ItemStack stack = hovered.currentRecipe().getOutput(this.client.world.getRegistryManager());
@@ -82,6 +99,7 @@ public class RecipeBookResultsMixin {
 
 // Устанавливаем в поиск
                     ((RecipeBookWidgetAccessor) jeb$widget).getSearchField().setText(searchText);
+                    ((RecipeBookWidgetAccessor) jeb$widget).setSelectedTab((RecipeGroupButtonWidget) ((RecipeBookWidgetAccessor) jeb$widget).getTabButtons().get(0));
                     ((RecipeBookWidgetAccessor) jeb$widget).invokeReset();
 
                     cir.setReturnValue(true);
@@ -123,7 +141,7 @@ public class RecipeBookResultsMixin {
                     cir.setReturnValue(true);
                     cir.cancel();
                 }
-            }
+            //}
         }
 
     }

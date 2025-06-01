@@ -1,6 +1,7 @@
 package jeb.mixin;
 
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
+import net.minecraft.client.gui.screen.recipebook.RecipeGroupButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.recipebook.ClientRecipeBook;
 import net.minecraft.recipe.RecipeMatcher;
@@ -27,6 +28,12 @@ public interface RecipeBookWidgetAccessor {
     AbstractRecipeScreenHandler<?> getCraftingScreenHandler();
     @Accessor("recipeBook")
     ClientRecipeBook getRecipeBook();
+
+    @Accessor("currentTab")
+    RecipeGroupButtonWidget getSelectedTab();
+
+    @Accessor("currentTab")
+    void setSelectedTab(RecipeGroupButtonWidget tab);
 
     /*@Accessor("tabs")
     List<RecipeBookWidget.Tab> getTabs();

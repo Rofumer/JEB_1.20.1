@@ -63,6 +63,7 @@ public class JEBClient implements ClientModInitializer {
 
     public static String string = "-";
     public static List<RecipeResultCollection> filtered = new ArrayList<>();
+    public static List<RecipeResultCollection> emptysearch = new ArrayList<>();
 
     public static boolean recipesLoaded = false;
 
@@ -253,8 +254,12 @@ public class JEBClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             recipesLoaded = false;
-            existingResultItems = new HashSet<>();
-            nonexistingResultItems = new HashSet<>();
+            //existingResultItems = new HashSet<>();
+            //nonexistingResultItems = new HashSet<>();
+            existingResultItems.clear();
+            nonexistingResultItems.clear();
+            string = "-";
+            emptysearch.clear();
         });
 
 

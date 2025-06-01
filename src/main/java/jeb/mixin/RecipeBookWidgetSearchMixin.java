@@ -2,6 +2,7 @@ package jeb.mixin;
 
 import jeb.accessor.AnimatedResultButtonExtension;
 import jeb.accessor.RecipeBookWidgetBridge;
+import jeb.client.DummySingleItemRecipe;
 import jeb.client.FavoritesManager;
 import jeb.client.JEBClient;
 import net.minecraft.client.gui.DrawContext;
@@ -38,8 +39,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.*;
 
-import static jeb.client.JEBClient.filtered;
-import static jeb.client.JEBClient.string;
+import static jeb.client.JEBClient.*;
 
 @Mixin(RecipeBookWidget.class)
 //public abstract class RecipeBookWidgetSearchMixin<T extends AbstractRecipeScreenHandler> implements RecipeBookWidgetBridge {
@@ -608,7 +608,14 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
     @Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
     private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
         String search = searchField.getText();
+        if (search != null && search.trim().isEmpty() && emptysearch != null && !emptysearch.isEmpty())
+        {
+            recipesArea.setResults(emptysearch, resetCurrentPage);
+            ci.cancel();
+        }
         boolean isIngredientSearch = search.startsWith("#");
+        boolean searchByResult = search.startsWith("~");
+        String query = (isIngredientSearch || searchByResult ? search.substring(1) : search).toLowerCase();
 
         final String finalQuery;
         final String finalModName;
@@ -635,6 +642,52 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
         List<RecipeResultCollection> originalList = recipeBook.getResultsForGroup(currentTab.getCategory());
         List<RecipeResultCollection> filteredList = new ArrayList<>();
+
+        if (search.startsWith("~") && !isFavoritesTabActive()) {
+            List<RecipeResultCollection> ingredientsList = new ArrayList<>();
+
+            for (RecipeResultCollection collection : recipeBook.getResultsForGroup(currentTab.getCategory())) {
+                for (Recipe<?> recipe : collection.getAllRecipes()) {
+                    ItemStack result = recipe.getOutput(client.world.getRegistryManager());
+                    String resultName = result.getItem().toString();//.getString().toLowerCase();
+                    if (resultName.equals(query)) {
+                        for (Ingredient ingredient : recipe.getIngredients()) {
+                            for (ItemStack stack : ingredient.getMatchingStacks()) {
+                                if (!stack.isEmpty()) {
+                                    // Создаём фиктивный RecipeCollection с одним "рецептом" — результат stack
+                                    // Проверяем, есть ли коллекция рецептов, где результат — этот ингредиент
+                                    boolean foundReal = false;
+                                    for (RecipeResultCollection subCollection : recipeBook.getResultsForGroup(RecipeBookGroup.CRAFTING_SEARCH)) {
+                                        for (Recipe<?> subRecipe : subCollection.getAllRecipes()) {
+                                            ItemStack subResult = subRecipe.getOutput(client.world.getRegistryManager());
+                                            if (!subResult.isEmpty() && ItemStack.areItemsEqual(subResult, stack)) {
+                                                ingredientsList.add(subCollection);
+                                                foundReal = true;
+                                                break;
+                                            }
+                                        }
+                                        if (foundReal) break;
+                                    }
+
+// Если не нашли настоящих рецептов — добавим фейковую коллекцию
+                                    if (!foundReal) {
+                                        Recipe<?> fakeRecipe = new DummySingleItemRecipe(stack);
+                                        ingredientsList.add(new RecipeResultCollection(client.world.getRegistryManager(), List.of(fakeRecipe)));
+                                    }
+
+                                    break; // только один stack из одного ingredient
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            filteredList.addAll(ingredientsList);
+            recipesArea.setResults(filteredList, resetCurrentPage);
+            ci.cancel();
+            return;
+        }
 
         if (isFavoritesTabActive()) {
             Set<Identifier> favorites = FavoritesManager.loadFavoriteItemIds();
@@ -668,12 +721,14 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             }
         }
 
-        filteredList.forEach(result ->
-                result.computeCraftables(recipeFinder,
-                        craftingScreenHandler.getCraftingWidth(),
-                        craftingScreenHandler.getCraftingHeight(),
-                        recipeBook)
-        );
+        if(!(((RecipeBookWidgetAccessor) this).getSearchField().isActive() && ((RecipeBookWidgetAccessor) this).getSearchField().isVisible() && ((RecipeBookWidgetAccessor) this).getSearchField().isFocused())) {
+            filteredList.forEach(result ->
+                    result.computeCraftables(recipeFinder,
+                            craftingScreenHandler.getCraftingWidth(),
+                            craftingScreenHandler.getCraftingHeight(),
+                            recipeBook)
+            );
+        }
 
         if (jeb$customToggleState) {
             filteredList.removeIf(result -> !result.hasFittingRecipes());
@@ -691,6 +746,11 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         }
 
         filteredList.addAll(filtered);
+
+        if (search != null && search.trim().isEmpty() && emptysearch.isEmpty())
+        {
+                emptysearch = filteredList;
+        }
 
         string=search;
 
