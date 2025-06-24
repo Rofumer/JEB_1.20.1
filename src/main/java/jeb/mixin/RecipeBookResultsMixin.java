@@ -119,23 +119,27 @@ public class RecipeBookResultsMixin {
 
                     if (entry != null) {
 
-                        if (!canDisplay(hovered.currentRecipe())
-                        ) {
-                            alternatesWidget.showAlternativesForResult(this.client, entry, hovered.getX(), hovered.getY(), areaLeft + areaWidth / 2, areaTop + 13 + areaHeight / 2, (float) hovered.getWidth());
-                        } else {
 
-                            this.lastClickedRecipe = hovered.currentRecipe();
-                            this.resultCollection = hovered.getResultCollection();
-                            //recipeBook.shouldDisplay(animatedResultButton.currentRecipe());
-                            recipeBook.onRecipeDisplayed(hovered.currentRecipe());
-                            ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
-                            networkHandler.sendPacket(new RecipeBookDataC2SPacket(hovered.currentRecipe()));
+                        if (!hovered.currentRecipe().getIngredients().isEmpty()) {
+
+                            if (!canDisplay(hovered.currentRecipe())) {
+                                alternatesWidget.showAlternativesForResult(this.client, entry, hovered.getX(), hovered.getY(), areaLeft + areaWidth / 2, areaTop + 13 + areaHeight / 2, (float) hovered.getWidth());
+                            } else {
+
+                                this.lastClickedRecipe = hovered.currentRecipe();
+                                this.resultCollection = hovered.getResultCollection();
+                                //recipeBook.shouldDisplay(animatedResultButton.currentRecipe());
+                                recipeBook.onRecipeDisplayed(hovered.currentRecipe());
+                                ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
+                                networkHandler.sendPacket(new RecipeBookDataC2SPacket(hovered.currentRecipe()));
                         /*this.lastClickedRecipe = animatedResultButton.getCurrentId();
                         this.resultCollection = animatedResultButton.getResultCollection();
                         recipeBook.unmarkHighlighted(animatedResultButton.getCurrentId());
                         ClientPlayNetworkHandler networkHandler = MinecraftClient.getInstance().getNetworkHandler();
                         networkHandler.sendPacket(new RecipeBookDataC2SPacket(animatedResultButton.getCurrentId()));*/
+                            }
                         }
+
                     }
 
                     cir.setReturnValue(true);

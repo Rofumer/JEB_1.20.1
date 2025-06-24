@@ -295,7 +295,7 @@ public class JEBClient implements ClientModInitializer {
         Runtime.getRuntime().addShutdownHook(new Thread(JEBClient::saveConfig));
 
         keyBinding = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Add/Remove Favorite Recipes", // The translation key of the keybinding's name
+                "key.jeb.add_remove_favorite_recipes", // The translation key of the keybinding's name
                 InputUtil.Type.KEYSYM, // The type of the keybinding, KEYSYM for keyboard, MOUSE for mouse.
                 GLFW.GLFW_KEY_A, // The keycode of the key
                 "JEB (Just Enough Book)" // The translation key of the keybinding's category.
