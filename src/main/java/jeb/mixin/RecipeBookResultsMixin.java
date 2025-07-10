@@ -9,6 +9,7 @@ import net.minecraft.client.recipebook.RecipeBookGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.packet.c2s.play.RecipeBookDataC2SPacket;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.registry.Registries;
 import net.minecraft.screen.AbstractRecipeScreenHandler;
 import net.minecraft.screen.ScreenHandler;
 import org.jetbrains.annotations.Nullable;
@@ -94,7 +95,8 @@ public class RecipeBookResultsMixin {
 
                 if (button == 1) {
                     ItemStack stack = hovered.currentRecipe().getOutput(this.client.world.getRegistryManager());
-                    String itemName = stack.getItem().getName().getString(); // Локализованное имя (например, "Булыжник")
+                    ///String itemName = stack.getItem().getName().getString(); // Локализованное имя (например, "Булыжник")
+                    String itemName = Registries.ITEM.getId(stack.getItem()).toString().toLowerCase(Locale.ROOT);
                     String searchText = "#" + itemName.toLowerCase(Locale.ROOT);
 
 // Устанавливаем в поиск

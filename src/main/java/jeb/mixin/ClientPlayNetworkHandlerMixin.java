@@ -1,5 +1,6 @@
 package jeb.mixin;
 
+import jeb.client.RecipeIndex;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.recipebook.RecipeResultCollection;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
@@ -21,6 +22,7 @@ import java.util.List;
 
 import static jeb.client.JEBClient.existingResultItems;
 import static jeb.client.JEBClient.nonexistingResultItems;
+import static jeb.client.RecipeIndex.buildRecipeIndex;
 
 @Mixin(ClientPlayNetworkHandler.class)
 public abstract class ClientPlayNetworkHandlerMixin {
@@ -56,6 +58,10 @@ public abstract class ClientPlayNetworkHandlerMixin {
             if (existingResultItems.contains(item)) continue;
             nonexistingResultItems.add(item);
         }
+
+        RecipeIndex.fillItemIndex(MinecraftClient.getInstance());
+        buildRecipeIndex();
+
 
     }
 

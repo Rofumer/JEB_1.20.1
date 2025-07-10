@@ -5,6 +5,7 @@ import jeb.accessor.RecipeBookWidgetBridge;
 import jeb.client.DummySingleItemRecipe;
 import jeb.client.FavoritesManager;
 import jeb.client.JEBClient;
+import jeb.client.RecipeIndex;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.recipebook.*;
 import net.minecraft.client.gui.tooltip.Tooltip;
@@ -608,11 +609,6 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
     @Inject(method = "refreshResults", at = @At("HEAD"), cancellable = true)
     private void onCustomSearch(boolean resetCurrentPage, CallbackInfo ci) {
         String search = searchField.getText();
-        if (search != null && search.trim().isEmpty() && emptysearch != null && !emptysearch.isEmpty())
-        {
-            recipesArea.setResults(emptysearch, resetCurrentPage);
-            ci.cancel();
-        }
         boolean isIngredientSearch = search.startsWith("#");
         boolean searchByResult = search.startsWith("~");
         String query = (isIngredientSearch || searchByResult ? search.substring(1) : search).toLowerCase();
@@ -661,6 +657,10 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
                                         for (Recipe<?> subRecipe : subCollection.getAllRecipes()) {
                                             ItemStack subResult = subRecipe.getOutput(client.world.getRegistryManager());
                                             if (!subResult.isEmpty() && ItemStack.areItemsEqual(subResult, stack)) {
+                                                subCollection.computeCraftables(recipeFinder,
+                                                        3,
+                                                        3,
+                                                        recipeBook);
                                                 ingredientsList.add(subCollection);
                                                 foundReal = true;
                                                 break;
@@ -672,7 +672,12 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 // Если не нашли настоящих рецептов — добавим фейковую коллекцию
                                     if (!foundReal) {
                                         Recipe<?> fakeRecipe = new DummySingleItemRecipe(stack);
-                                        ingredientsList.add(new RecipeResultCollection(client.world.getRegistryManager(), List.of(fakeRecipe)));
+                                        RecipeResultCollection dummycollection = new RecipeResultCollection(client.world.getRegistryManager(), List.of(fakeRecipe));
+                                                dummycollection.computeCraftables(recipeFinder,
+                                                        3,
+                                                        3,
+                                                        recipeBook);
+                                        ingredientsList.add(dummycollection);
                                     }
 
                                     break; // только один stack из одного ingredient
@@ -699,7 +704,12 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
                         .toList();
 
                 if (!matching.isEmpty()) {
-                    filteredList.add(new RecipeResultCollection(client.world.getRegistryManager(), matching));
+                    RecipeResultCollection fakeCollection = new RecipeResultCollection(client.world.getRegistryManager(), matching);
+                    fakeCollection.computeCraftables(recipeFinder,
+                            3,
+                            3,
+                            recipeBook);
+                    filteredList.add(fakeCollection);
                 }
             }
 
@@ -708,7 +718,7 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             return;
         }
 
-        for (RecipeResultCollection collection : originalList) {
+        /*for (RecipeResultCollection collection : originalList) {
             if (!collection.hasFittingRecipes()) continue;
 
             boolean matches = collection.getAllRecipes().stream().anyMatch(recipe ->
@@ -719,7 +729,9 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
             if (matches) {
                 filteredList.add(collection);
             }
-        }
+        }*/
+
+        filteredList = new ArrayList<>(RecipeIndex.fastSearch(currentTab.getCategory(),finalQuery, finalModName, isIngredientSearch));
 
         if(!(((RecipeBookWidgetAccessor) this).getSearchField().isActive() && ((RecipeBookWidgetAccessor) this).getSearchField().isVisible() && ((RecipeBookWidgetAccessor) this).getSearchField().isFocused())) {
             filteredList.forEach(result ->
@@ -747,11 +759,6 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
 
         if(!toggleCraftableButton.isToggled()) {
             filteredList.addAll(filtered);
-        }
-
-        if (search != null && search.trim().isEmpty() && emptysearch.isEmpty())
-        {
-                emptysearch = filteredList;
         }
 
         string=search;

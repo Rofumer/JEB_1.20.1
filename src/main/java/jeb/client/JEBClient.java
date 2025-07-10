@@ -34,6 +34,8 @@ import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
 import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.item.TooltipContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -47,6 +49,8 @@ import static net.minecraft.client.resource.language.I18n.translate;
 public class JEBClient implements ClientModInitializer {
 
     public static boolean customToggleEnabled = true;
+
+    public static final Logger LOGGER = LoggerFactory.getLogger("JEB");
 
     private static final Path CONFIG_PATH = Paths.get(
             MinecraftClient.getInstance().runDirectory.getAbsolutePath(),
