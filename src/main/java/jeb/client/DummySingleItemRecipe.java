@@ -39,7 +39,7 @@ public class DummySingleItemRecipe implements Recipe<RecipeInputInventory> {
 
     @Override
     public Identifier getId() {
-        return new Identifier("jeb", "dummy_" + Registries.ITEM.getKey(result.getItem()).get());
+        return new Identifier("jeb", "dummy_" + Registries.ITEM.getId(result.getItem()).getPath());
     }
 
     @Override
