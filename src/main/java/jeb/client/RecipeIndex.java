@@ -60,7 +60,36 @@ public class RecipeIndex {
         Set<Identifier> uniqueRecipes = new HashSet<>();
 
         for (RecipeBookGroup category : RecipeBookGroup.values()) {
-            List<RecipeResultCollection> collections = book.getResultsForGroup(category);
+            List<RecipeResultCollection> collections;
+
+            long filterstartTime = System.currentTimeMillis();
+            LOGGER.info("[JEB] buildRecipeIndex filtering started at {}", new Date(filterstartTime));
+
+            List<RecipeResultCollection> filteredCollections = new ArrayList<>();
+
+            for (RecipeResultCollection collection : book.getResultsForGroup(category)) {
+                // Оставляем только те рецепты, которые дают валидный результат
+                List<Recipe<?>> filtered = collection.getAllRecipes().stream()
+                        .filter(recipe -> {
+                            ItemStack result = recipe.getOutput(minecraft.world.getRegistryManager());
+                            return result != null && !result.isEmpty() && result.getItem() != Items.AIR;
+                        })
+                        .toList();
+
+                // Если после фильтрации в коллекции что-то осталось — добавляем новую коллекцию
+                if (!filtered.isEmpty()) {
+                    filteredCollections.add(new RecipeResultCollection(
+                            minecraft.world.getRegistryManager(), filtered
+                    ));
+                }
+            }
+
+            long filterendTime = System.currentTimeMillis();
+            long filterduration = filterendTime - filterstartTime;
+            LOGGER.info("[JEB] buildRecipeIndex filter {} done at {} ({} ms)", category, new Date(filterendTime), filterduration);
+
+            collections =filteredCollections;
+
             if (collections.isEmpty()) continue;
 
             Set<RecipeResultCollection> categoryCollections = new LinkedHashSet<>();
@@ -73,7 +102,7 @@ public class RecipeIndex {
                 categoryCollections.add(collection);
                 for (Recipe<?> recipe : collection.getAllRecipes()) {
                     ItemStack result = recipe.getOutput(minecraft.world.getRegistryManager());
-                    if (result == null || result.isEmpty()) continue;
+                    //if (result == null || result.isEmpty() || result.getItem() == Items.AIR) continue;
                     Identifier recipeId = recipe.getId();
                     if (uniqueRecipes.add(recipeId)) {
                         totalIndexedRecipes++;
