@@ -1,6 +1,7 @@
 {
   "items.craftsfromitem": "ПКМ: Использования • СКМ: Рецепты",
-  "key.jeb.add_remove_favorite_recipes": "Добавить/убрать избранный рецепт", 
+  "key.jeb.add_remove_favorite_recipes": "Добавить/убрать избранный рецепт",
   "items.title": "Книга рецептов",
-  "itemGroup.items": "Just Enough Book"
-}	
+  "itemGroup.items": "Just Enough Book",
+  "jeb.recipe_book.back": "Назад к предыдущему поиску"
+}

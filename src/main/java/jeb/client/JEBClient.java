@@ -73,6 +73,15 @@ public class JEBClient implements ClientModInitializer {
 
     //public static List<RecipeResultCollection> PREGENERATED_RECIPES = generateCustomRecipeList("");
 
+    // Последний текст поиска по каждому типу книги рецептов (верстак/печь/...).
+    // Живёт только в памяти клиента — переживает закрытие/переоткрытие экрана,
+    // но не переживает перезапуск игры.
+    public static final Map<RecipeBookCategory, String> lastSearchByType = new HashMap<>();
+
+    // Стек предыдущих поисковых запросов (кнопка "назад") по каждому типу книги
+    // рецептов — по той же причине хранится тут, а не в самом виджете.
+    public static final Map<RecipeBookCategory, Deque<SearchHistoryEntry>> searchHistoryByType = new HashMap<>();
+
 
     public static List<RecipeResultCollection> generateCustomRecipeList(String filter) {
         List<RecipeResultCollection> list = new ArrayList<>();
@@ -314,6 +323,8 @@ public class JEBClient implements ClientModInitializer {
             nonexistingResultItems.clear();
             string = "-";
             emptysearch.clear();
+            lastSearchByType.clear();
+            searchHistoryByType.clear();
         });
 
 

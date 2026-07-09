@@ -1,4 +1,5 @@
 {
   "items.craftsfromitem": "Right Click: Uses • Middle Click: Ingredients",
-  "key.jeb.add_remove_favorite_recipes": "Add/Remove Favorite Recipe"
+  "key.jeb.add_remove_favorite_recipes": "Add/Remove Favorite Recipe",
+  "jeb.recipe_book.back": "Back to previous search"
 }
