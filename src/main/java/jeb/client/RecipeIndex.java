@@ -22,15 +22,62 @@ import static jeb.client.JEBClient.nonexistingResultItems;
 import static jeb.client.JEBClient.LOGGER;
 
 public class RecipeIndex {
-    // Индексы по категориям
-    public final Map<RecipeBookGroup, Map<String, List<RecipeResultCollection>>> byResult = new HashMap<>();
-    public final Map<RecipeBookGroup, Map<String, List<RecipeResultCollection>>> byMod = new HashMap<>();
-    public final Map<RecipeBookGroup, Map<String, List<RecipeResultCollection>>> byIngredientWord = new HashMap<>();
-    public final Map<RecipeBookGroup, Map<String, List<RecipeResultCollection>>> byTooltipWord = new HashMap<>();
+    // Индексы по категориям.
+    // Раньше byResult/byMod/byTooltipWord хранили все подстроки id/имени/мода/слов тултипа
+    // (O(n²) ключей на строку) — на больших сборках это сотни МБ (issue #10).
+    // Теперь на каждую коллекцию хранится одна компактная запись, а подстроки ищутся
+    // через contains() при поиске — это линейный проход, единицы мс даже на тысячах коллекций.
+    public final Map<RecipeBookGroup, Map<RecipeResultCollection, SearchEntry>> searchEntries = new HashMap<>();
+    public final Map<RecipeBookGroup, Map<String, Set<RecipeResultCollection>>> byIngredientWord = new HashMap<>();
     public final Map<RecipeBookGroup, Set<RecipeResultCollection>> allCollections = new HashMap<>();
     public static final RecipeIndex GLOBAL_RECIPE_INDEX = new RecipeIndex();
 
     public static boolean jebIndexReady = false;
+
+    // Разделитель значений внутри строк SearchEntry. Запрос обрезан trim() и не содержит '\n',
+    // поэтому contains() по склеенной строке совпадает только внутри одного значения.
+    private static final String SEPARATOR = "\n";
+    private static final int MIN_TOOLTIP_QUERY_LENGTH = 3;
+
+    /**
+     * Поисковые строки одной коллекции. Коллекция — ванильная группа рецептов,
+     * и рецепты в ней могут давать разные результаты, поэтому id/имена/моды тоже склеиваются.
+     */
+    public static final class SearchEntry {
+        final String ids;
+        final String names;
+        final String mods;
+        // Уникальные слова тултипа (длиной >= 3)
+        final String tooltipWords;
+
+        SearchEntry(Builder b) {
+            this.ids = String.join(SEPARATOR, b.ids);
+            this.names = String.join(SEPARATOR, b.names);
+            this.mods = String.join(SEPARATOR, b.mods);
+            this.tooltipWords = String.join(SEPARATOR, b.tooltipWords);
+        }
+
+        boolean matchesMod(String modName) {
+            return mods.contains(modName);
+        }
+
+        boolean matchesResult(String query) {
+            return !query.contains(SEPARATOR) && (ids.contains(query) || names.contains(query));
+        }
+
+        boolean matchesTooltip(String query) {
+            return query.length() >= MIN_TOOLTIP_QUERY_LENGTH
+                    && !query.contains(SEPARATOR)
+                    && tooltipWords.contains(query);
+        }
+
+        static final class Builder {
+            final Set<String> ids = new LinkedHashSet<>();
+            final Set<String> names = new LinkedHashSet<>();
+            final Set<String> mods = new LinkedHashSet<>();
+            final Set<String> tooltipWords = new LinkedHashSet<>();
+        }
+    }
 
     public static RecipeManager recipeManager;
 
@@ -50,10 +97,8 @@ public class RecipeIndex {
         MinecraftClient minecraft = MinecraftClient.getInstance();
         ClientRecipeBook book = minecraft.player.getRecipeBook();
 
-        GLOBAL_RECIPE_INDEX.byResult.clear();
-        GLOBAL_RECIPE_INDEX.byMod.clear();
+        GLOBAL_RECIPE_INDEX.searchEntries.clear();
         GLOBAL_RECIPE_INDEX.byIngredientWord.clear();
-        GLOBAL_RECIPE_INDEX.byTooltipWord.clear();
         GLOBAL_RECIPE_INDEX.allCollections.clear();
 
         int totalIndexedRecipes = 0;
@@ -93,13 +138,12 @@ public class RecipeIndex {
             if (collections.isEmpty()) continue;
 
             Set<RecipeResultCollection> categoryCollections = new LinkedHashSet<>();
-            Map<String, List<RecipeResultCollection>> resultIndex = new HashMap<>();
-            Map<String, List<RecipeResultCollection>> modIndex = new HashMap<>();
-            Map<String, List<RecipeResultCollection>> ingredientIndex = new HashMap<>();
-            Map<String, List<RecipeResultCollection>> tooltipIndex = new HashMap<>();
+            Map<String, Set<RecipeResultCollection>> ingredientIndex = new HashMap<>();
+            Map<RecipeResultCollection, SearchEntry> entries = new HashMap<>();
 
             for (RecipeResultCollection collection : collections) {
                 categoryCollections.add(collection);
+                SearchEntry.Builder builder = null;
                 for (Recipe<?> recipe : collection.getAllRecipes()) {
                     ItemStack result = recipe.getOutput(minecraft.world.getRegistryManager());
                     //if (result == null || result.isEmpty() || result.getItem() == Items.AIR) continue;
@@ -107,78 +151,31 @@ public class RecipeIndex {
                     if (uniqueRecipes.add(recipeId)) {
                         totalIndexedRecipes++;
                     }
-                    // --- Индекс по результату ---
-                    String resultId = Registries.ITEM.getId(result.getItem()).toString().toLowerCase(Locale.ROOT);
-                    resultIndex.computeIfAbsent(resultId, k -> new ArrayList<>()).add(collection);
-                    // По имени (displayName)
-                    String name = result.getName().getString().toLowerCase(Locale.ROOT).replaceAll("[\\[\\]«»\"]", "");
-                    ///resultIndex.computeIfAbsent(name, k -> new ArrayList<>()).add(collection);
-                    for (String source : List.of(resultId, name)) {
-                        for (int i = 0; i < source.length(); i++) {
-                            for (int j = i + 1; j <= source.length(); j++) {
-                                String substr = source.substring(i, j);
-                                if (substr.isEmpty()) continue;
-                                resultIndex.computeIfAbsent(substr, k -> new ArrayList<>()).add(collection);
-                            }
-                        }
-                    }
+                    if (builder == null) builder = new SearchEntry.Builder();
 
+                    // --- Поисковые строки результата: id, имя (displayName), мод ---
+                    Identifier key = Registries.ITEM.getId(result.getItem());
+                    builder.ids.add(key.toString().toLowerCase(Locale.ROOT));
+                    builder.names.add(result.getName().getString().toLowerCase(Locale.ROOT).replaceAll("[\\[\\]«»\"]", ""));
+                    builder.mods.add(key.getNamespace().toLowerCase(Locale.ROOT));
 
-                    // --- Индекс по модам ---
-                    String mod = Registries.ITEM.getId(result.getItem()).getNamespace().toLowerCase(Locale.ROOT);
-                    ///modIndex.computeIfAbsent(mod, k -> new ArrayList<>()).add(collection);
-
-                    for (int i = 0; i < mod.length(); i++) {
-                        for (int j = i + 1; j <= mod.length(); j++) {
-                            String substr = mod.substring(i, j);
-                            if (substr.isEmpty()) continue;
-                            modIndex.computeIfAbsent(substr, k -> new ArrayList<>()).add(collection);
-                        }
-                    }
-
-
-                    // --- Индекс по ингредиентам ---
+                    // --- Индекс по ингредиентам (точный id) ---
                     for (var ingredient : recipe.getIngredients()) {
                         for (ItemStack stack : ingredient.getMatchingStacks()) {
                             String ingredientId = Registries.ITEM.getId(stack.getItem()).toString().toLowerCase(Locale.ROOT);
-                            ingredientIndex.computeIfAbsent(ingredientId, k -> new ArrayList<>()).add(collection);
+                            ingredientIndex.computeIfAbsent(ingredientId, k -> new LinkedHashSet<>()).add(collection);
                         }
                     }
 
-                    // --- Индекс по тултипам ---
-                    List<String> tooltipLines = new ArrayList<>();
-                    try {
-                        var tooltipFlag = minecraft.options.advancedItemTooltips
-                                ? TooltipContext.Default.ADVANCED
-                                : TooltipContext.Default.BASIC;
-                        tooltipLines = result.getTooltip( minecraft.player, tooltipFlag)
-                                .stream()
-                                .map(c -> Formatting.strip(c.getString()).toLowerCase(Locale.ROOT).trim())
-                                .toList();
-                    } catch (Exception e) {}
-
-                    for (String tooltipLine : tooltipLines) {
-                        for (String word : tooltipLine.split("[\\s,;.:!\\-]+")) {
-                            if (word.length() < 3) continue;
-                            ///tooltipIndex.computeIfAbsent(word, k -> new ArrayList<>()).add(collection);
-                            for (int i = 0; i <= word.length() - 3; i++) {
-                                for (int j = i + 3; j <= word.length(); j++) {
-                                    String substr = word.substring(i, j);
-                                    if (substr.isEmpty()) continue;
-                                    tooltipIndex.computeIfAbsent(substr, k -> new ArrayList<>()).add(collection);
-                                }
-                            }
-
-                        }
-                    }
+                    // --- Слова тултипа ---
+                    builder.tooltipWords.addAll(tooltipWords(minecraft, result));
                 }
+                if (builder != null) entries.put(collection, new SearchEntry(builder));
             }
 
             GLOBAL_RECIPE_INDEX.allCollections.put(category, categoryCollections);
-            GLOBAL_RECIPE_INDEX.byResult.put(category, resultIndex);
-            GLOBAL_RECIPE_INDEX.byMod.put(category, modIndex);
+            GLOBAL_RECIPE_INDEX.searchEntries.put(category, entries);
             GLOBAL_RECIPE_INDEX.byIngredientWord.put(category, ingredientIndex);
-            GLOBAL_RECIPE_INDEX.byTooltipWord.put(category, tooltipIndex);
 
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
@@ -190,6 +187,22 @@ public class RecipeIndex {
         long endTime = System.currentTimeMillis();
         long duration = endTime - startTime;
         LOGGER.info("[JEB] buildRecipeIndex done at {} ({} ms), total indexed recipes: {}", new Date(endTime), duration, totalIndexedRecipes);
+    }
+
+    private static Set<String> tooltipWords(MinecraftClient minecraft, ItemStack result) {
+        Set<String> words = new LinkedHashSet<>();
+        try {
+            var tooltipFlag = minecraft.options.advancedItemTooltips
+                    ? TooltipContext.Default.ADVANCED
+                    : TooltipContext.Default.BASIC;
+            for (var line : result.getTooltip(minecraft.player, tooltipFlag)) {
+                String clean = Formatting.strip(line.getString()).toLowerCase(Locale.ROOT).trim();
+                for (String word : clean.split("[\\s,;.:!\\-]+")) {
+                    if (word.length() >= MIN_TOOLTIP_QUERY_LENGTH) words.add(word);
+                }
+            }
+        } catch (Exception e) {}
+        return words;
     }
 
 
@@ -207,45 +220,59 @@ public class RecipeIndex {
         Set<RecipeResultCollection> result = new LinkedHashSet<>();
 
         for (RecipeBookGroup category : categories) {
-            Map<String, List<RecipeResultCollection>> modIndex = GLOBAL_RECIPE_INDEX.byMod.getOrDefault(category, Map.of());
-            Map<String, List<RecipeResultCollection>> ingredientIndex = GLOBAL_RECIPE_INDEX.byIngredientWord.getOrDefault(category, Map.of());
+            Map<String, Set<RecipeResultCollection>> ingredientIndex = GLOBAL_RECIPE_INDEX.byIngredientWord.getOrDefault(category, Map.of());
             Set<RecipeResultCollection> all = GLOBAL_RECIPE_INDEX.allCollections.getOrDefault(category, Set.of());
-            Map<String, List<RecipeResultCollection>> resultIndex = GLOBAL_RECIPE_INDEX.byResult.getOrDefault(category, Map.of());
-            Map<String, List<RecipeResultCollection>> tooltipIndex = GLOBAL_RECIPE_INDEX.byTooltipWord.getOrDefault(category, Map.of());
+            Map<RecipeResultCollection, SearchEntry> entries = GLOBAL_RECIPE_INDEX.searchEntries.getOrDefault(category, Map.of());
 
             if ((modName.isEmpty()) && query.isEmpty()) {
                 result.addAll(all);
                 continue;
             }
 
+            // Поиск по модулю (namespace)
             if (!modName.isEmpty()) {
-                List<RecipeResultCollection> modCollections = modIndex.getOrDefault(modName, List.of());
+                List<RecipeResultCollection> modCollections = new ArrayList<>();
+                List<SearchEntry> modEntries = new ArrayList<>();
+                for (RecipeResultCollection rc : all) {
+                    SearchEntry entry = entries.get(rc);
+                    if (entry != null && entry.matchesMod(modName)) {
+                        modCollections.add(rc);
+                        modEntries.add(entry);
+                    }
+                }
                 if (query.isEmpty()) {
                     result.addAll(modCollections);
                     continue;
                 }
+                // Ищем среди коллекций по моду по словам
                 for (String word : query.split("[\\s:_\\-]+")) {
-                    List<RecipeResultCollection> byWord = resultIndex.getOrDefault(word, List.of());
-                    for (RecipeResultCollection rc : byWord) {
-                        if (modCollections.contains(rc))
-                            result.add(rc);
+                    if (word.isEmpty()) continue;
+                    for (int i = 0; i < modCollections.size(); i++) {
+                        if (modEntries.get(i).matchesResult(word))
+                            result.add(modCollections.get(i));
                     }
                 }
                 continue;
             }
 
-            if (searchIngredients && !query.isEmpty()) {
-                List<RecipeResultCollection> byIng = ingredientIndex.getOrDefault(query, List.of());
-                result.addAll(byIng);
+            // Поиск по ингредиенту
+            if (searchIngredients) {
+                result.addAll(ingredientIndex.getOrDefault(query, Set.of()));
                 continue;
             }
 
-            if (!query.isEmpty() && !searchIngredients) {
-                List<RecipeResultCollection> byResult = resultIndex.getOrDefault(query, List.of());
-                result.addAll(byResult);
-                List<RecipeResultCollection> byTooltip = tooltipIndex.getOrDefault(query, List.of());
-                result.addAll(byTooltip);
+            // Поиск по результату (id или имя), затем по тултипам
+            List<RecipeResultCollection> byTooltip = new ArrayList<>();
+            for (RecipeResultCollection rc : all) {
+                SearchEntry entry = entries.get(rc);
+                if (entry == null) continue;
+                if (entry.matchesResult(query)) {
+                    result.add(rc);
+                } else if (entry.matchesTooltip(query)) {
+                    byTooltip.add(rc);
+                }
             }
+            result.addAll(byTooltip);
         }
 
         return new ArrayList<>(result);
