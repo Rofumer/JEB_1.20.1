@@ -1,5 +1,6 @@
 package jeb.mixin;
 
+import net.minecraft.client.gui.screen.recipebook.RecipeBookGhostSlots;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookWidget;
 import net.minecraft.client.gui.screen.recipebook.RecipeGroupButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -28,6 +29,8 @@ public interface RecipeBookWidgetAccessor {
     AbstractRecipeScreenHandler<?> getCraftingScreenHandler();
     @Accessor("recipeBook")
     ClientRecipeBook getRecipeBook();
+    @Accessor("ghostSlots")
+    RecipeBookGhostSlots getGhostSlots();
 
     @Accessor("currentTab")
     RecipeGroupButtonWidget getSelectedTab();

@@ -410,6 +410,16 @@ public abstract class RecipeBookWidgetSearchMixin implements RecipeBookWidgetBri
         }
     }
 
+    // Не показываем ghost-рецепт, если он не влезает в сетку (например 3x3 в инвентаре 2x2)
+    @Inject(method = "showGhostRecipe", at = @At("HEAD"), cancellable = true)
+    private void jeb$skipGhostIfTooBig(Recipe<?> recipe, List<net.minecraft.screen.slot.Slot> slots, CallbackInfo ci) {
+        AbstractRecipeScreenHandler<?> handler = ((RecipeBookWidgetAccessor) this).getCraftingScreenHandler();
+        if (handler != null && !recipe.fits(handler.getCraftingWidth(), handler.getCraftingHeight())) {
+            ((RecipeBookWidgetAccessor) this).getGhostSlots().reset();
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "mouseClicked", at = @At(
             value = "INVOKE",
             target = "Lnet/minecraft/client/network/ClientPlayerInteractionManager;clickRecipe(ILnet/minecraft/recipe/Recipe;Z)V",
